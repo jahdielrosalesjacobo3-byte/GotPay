@@ -7,6 +7,7 @@ import { PaymentOverlay } from "@/components/PaymentOverlay";
 import { PosKeypad } from "@/components/PosKeypad";
 import { ShiftHistoryStrip } from "@/components/ShiftHistoryStrip";
 import { useGotPayPos } from "@/components/useGotPayPos";
+import { useServerStatus } from "@/components/useServerStatus";
 import {
   BarChart3,
   Calculator,
@@ -51,6 +52,9 @@ export default function GotPayCashierPage() {
     triggerSseReconnectTest,
     replayChargeVoice,
   } = useGotPayPos("api");
+  const serverStatus = useServerStatus(engineMode === "api");
+  const sidebarClabeLast4 =
+    engineMode === "mock" ? "5713" : serverStatus.merchantClabeLast4;
 
   const [activeView, setActiveView] = useState<WorkspaceSection>("all");
   const [amountStr, setAmountStr] = useState<string>("0.01");
@@ -285,7 +289,9 @@ export default function GotPayCashierPage() {
                 Comercio Mostrador
               </div>
               <div className="truncate font-mono text-[11px] text-[var(--gp-slate)]">
-                CLABE •••• 5713
+                {sidebarClabeLast4
+                  ? `CLABE •••• ${sidebarClabeLast4}`
+                  : "CLABE no configurada"}
               </div>
             </div>
           </div>

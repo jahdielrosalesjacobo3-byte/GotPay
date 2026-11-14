@@ -7,6 +7,14 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/fintech-primitives";
+import { useServerStatus } from "@/components/useServerStatus";
+import {
+  computeConfirmationStats,
+  computeRevenueSeries,
+  estimateCardFeeSavings,
+  ESTIMATED_CARD_TERMINAL_FEE_RATE,
+  type RevenueBucket,
+} from "@/lib/analytics/revenue";
 import type { GotPayCharge } from "@/types/gotpay";
 import {
   ArrowLeftRight,
@@ -38,13 +46,6 @@ interface MerchantDashboardProps {
   readonly wakeLockActive: boolean;
   readonly onQuickCreateDemo: () => void;
   readonly posWidget?: React.ReactNode;
-}
-
-interface HourlyBucket {
-  readonly hourLabel: string;
-  readonly totalMxn: number;
-  readonly targetMxn: number;
-  readonly count: number;
 }
 
 function describeSemiArc(
@@ -112,63 +113,17 @@ export function MerchantDashboard({
     };
   }, [confirmedCharges]);
 
-  const hourlySeries: ReadonlyArray<HourlyBucket> = useMemo(() => {
-    const extraLiveMxn = Math.max(0, summary.paidTotalMxn - 105.51);
-    const extraLiveCount = Math.max(
-      0,
-      summary.paidCount + summary.lateCount - 3,
-    );
-    const scale = period === "hoy" ? 1 : period === "7d" ? 6.5 : 24;
+  const isMock = sseState === "mock";
+  const serverStatus = useServerStatus(!isMock);
+  const merchantClabeLast4 = isMock ? "5713" : serverStatus.merchantClabeLast4;
 
-    return [
-      {
-        hourLabel:
-          period === "hoy" ? "09:00" : period === "7d" ? "Lun" : "Sem 1",
-        totalMxn: Math.round(140 * scale * 100) / 100,
-        targetMxn: Math.round(115 * scale * 100) / 100,
-        count: 3,
-      },
-      {
-        hourLabel:
-          period === "hoy" ? "10:00" : period === "7d" ? "Mar" : "Sem 2",
-        totalMxn: Math.round(285 * scale * 100) / 100,
-        targetMxn: Math.round(210 * scale * 100) / 100,
-        count: 5,
-      },
-      {
-        hourLabel:
-          period === "hoy" ? "11:00" : period === "7d" ? "Mié" : "Sem 3",
-        totalMxn: Math.round(410.5 * scale * 100) / 100,
-        targetMxn: Math.round(300 * scale * 100) / 100,
-        count: 7,
-      },
-      {
-        hourLabel:
-          period === "hoy" ? "12:00" : period === "7d" ? "Jue" : "Sem 4",
-        totalMxn: Math.round(320 * scale * 100) / 100,
-        targetMxn: Math.round(275 * scale * 100) / 100,
-        count: 6,
-      },
-      {
-        hourLabel:
-          period === "hoy" ? "13:00" : period === "7d" ? "Hoy" : "Actual",
-        totalMxn: Math.round((105.51 + extraLiveMxn) * scale * 100) / 100,
-        targetMxn: Math.round(240 * scale * 100) / 100,
-        count: 3 + extraLiveCount,
-      },
-    ];
-  }, [summary, period]);
-
-  const maxBucketMxn = useMemo(
-    () =>
-      Math.max(
-        450,
-        ...hourlySeries.map((b) => Math.max(b.totalMxn, b.targetMxn)),
-      ),
-    [hourlySeries],
+  // Serie real por hora (Hoy), día (7D) o semana (30D) desde paidAt (America/Mexico_City)
+  const hourlySeries: ReadonlyArray<RevenueBucket> = useMemo(
+    () => computeRevenueSeries(charges, period),
+    [charges, period],
   );
 
-  const shiftCumulativeMxn = useMemo(
+  const periodTotalMxn = useMemo(
     () =>
       Math.round(
         hourlySeries.reduce((acc, item) => acc + item.totalMxn, 0) * 100,
@@ -176,9 +131,17 @@ export function MerchantDashboard({
     [hourlySeries],
   );
 
+  const seriesIsEmpty = hourlySeries.every((b) => b.count === 0);
+
+  const maxBucketMxn = useMemo(() => {
+    const max = Math.max(0, ...hourlySeries.map((b) => b.totalMxn));
+    return max > 0 ? max * 1.15 : 1;
+  }, [hourlySeries]);
+
+  // Ahorro ESTIMADO vs terminal con tarjeta sobre el total real cobrado
   const estimatedPosFeeSaved = useMemo(
-    () => Math.round(shiftCumulativeMxn * 0.0417 * 100) / 100,
-    [shiftCumulativeMxn],
+    () => estimateCardFeeSavings(summary.paidTotalMxn),
+    [summary.paidTotalMxn],
   );
 
   const svgPoints = useMemo(() => {
@@ -195,10 +158,8 @@ export function MerchantDashboard({
       const x =
         padLeft + (idx / Math.max(1, hourlySeries.length - 1)) * usableW;
       const ratio = Math.min(1, bucket.totalMxn / maxBucketMxn);
-      const targetRatio = Math.min(1, bucket.targetMxn / maxBucketMxn);
       const y = padTop + usableH - ratio * usableH;
-      const targetY = padTop + usableH - targetRatio * usableH;
-      return { x, y, targetY, bucket };
+      return { x, y, bucket };
     });
   }, [hourlySeries, maxBucketMxn]);
 
@@ -211,16 +172,6 @@ export function MerchantDashboard({
       .join(" ");
   }, [svgPoints]);
 
-  const targetLinePath = useMemo(() => {
-    if (svgPoints.length === 0) return "";
-    return svgPoints
-      .map(
-        (pt, i) =>
-          `${i === 0 ? "M" : "L"}${pt.x.toFixed(1)},${pt.targetY.toFixed(1)}`,
-      )
-      .join(" ");
-  }, [svgPoints]);
-
   const areaPath = useMemo(() => {
     if (svgPoints.length === 0) return "";
     const first = svgPoints[0]!;
@@ -229,8 +180,11 @@ export function MerchantDashboard({
   }, [linePath, svgPoints]);
 
   const handleCopyClabe = () => {
+    if (!merchantClabeLast4) return;
     if (typeof navigator !== "undefined" && navigator.clipboard) {
-      navigator.clipboard.writeText("•••• •••• •••• 5713").catch(() => {});
+      navigator.clipboard
+        .writeText(`•••• •••• •••• ${merchantClabeLast4}`)
+        .catch(() => {});
     }
     setCopiedRef(true);
     setTimeout(() => setCopiedRef(false), 1800);
@@ -241,49 +195,61 @@ export function MerchantDashboard({
   const ringCirc = 2 * Math.PI * ringRadius;
   const qrArc = (channelBreakdown.qrPct / 100) * ringCirc;
 
-  // Meta del turno
-  const shiftBudget = 500;
-  const shiftGoalPct = Math.min(
-    100,
-    Math.round((summary.paidTotalMxn / shiftBudget) * 100),
-  );
-
-  // Health Score Gauge (estilo HealthScore de shadcn-fintech)
-  const healthScore = 98;
+  // Salud operativa con indicadores reales (sin puntajes inventados)
+  const confirmation = computeConfirmationStats(charges);
+  const gaugeValue = confirmation.ratePct;
   const gaugeR = 58;
   const gaugeHalfCirc = Math.PI * gaugeR;
-  const gaugeDash = (healthScore / 100) * gaugeHalfCirc;
+  const gaugeDash = ((gaugeValue ?? 0) / 100) * gaugeHalfCirc;
   const gaugeGap = gaugeHalfCirc - gaugeDash;
   const gaugeTrackPath = describeSemiArc(80, 74, gaugeR, -180, 0);
 
-  const healthFactors = [
+  const storeLabel = isMock
+    ? "Mock local"
+    : serverStatus.storeReachable === null
+      ? "Verificando…"
+      : serverStatus.storeReachable
+        ? "Alcanzable"
+        : "Sin respuesta";
+
+  const healthFactors: ReadonlyArray<{
+    id: string;
+    label: string;
+    value: string;
+    ok: boolean | null;
+    icon: typeof Zap;
+  }> = [
     {
-      id: "spei",
-      label: "Liquidación SPEI 24/7",
-      score: 100,
-      color: "#0ADDA9",
+      id: "sse",
+      label: "Stream en vivo (SSE)",
+      value: isMock
+        ? "Mock"
+        : sseState === "connected"
+          ? "Conectado"
+          : "Reconectando",
+      ok: isMock ? null : sseState === "connected",
+      icon: Zap,
+    },
+    {
+      id: "store",
+      label: "Base de cobros (/api/health)",
+      value: storeLabel,
+      ok: isMock ? null : serverStatus.storeReachable,
       icon: Landmark,
     },
     {
-      id: "voice",
-      label: `Locución es-MX (${turnOpen ? "Activa" : "Lista"})`,
-      score: turnOpen ? 100 : 92,
-      color: "#026EFB",
-      icon: Volume2,
-    },
-    {
-      id: "privacy",
-      label: "Privacidad CLABE (clabeLast4)",
-      score: 100,
-      color: "#02BEC8",
+      id: "confirm",
+      label: "Pagos confirmados vs expirados",
+      value: `${confirmation.confirmed} / ${confirmation.expired}`,
+      ok: gaugeValue === null ? null : gaugeValue >= 50,
       icon: ShieldCheck,
     },
     {
-      id: "sse",
-      label: `Stream SSE (${sseState === "connected" ? "Conectado" : "Poll 2s"})`,
-      score: 96,
-      color: "#026EFB",
-      icon: Zap,
+      id: "voice",
+      label: "Locución es-MX",
+      value: turnOpen ? "Activa" : "Lista",
+      ok: turnOpen,
+      icon: Volume2,
     },
   ];
 
@@ -406,7 +372,9 @@ export function MerchantDashboard({
             {formatMxn(avgTicketMxn)}
           </div>
           <div className="flex items-center justify-between text-[11px] text-[var(--gp-slate)]">
-            <span>Ahorro vs TPV</span>
+            <span title="Estimado: comisión típica de terminal con tarjeta">
+              Ahorro estimado vs TPV ({(ESTIMATED_CARD_TERMINAL_FEE_RATE * 100).toFixed(2)}%)
+            </span>
             <span className="font-semibold text-[var(--gp-navy)]">
               +{formatMxn(estimatedPosFeeSaved)}
             </span>
@@ -455,11 +423,7 @@ export function MerchantDashboard({
               <div className="flex items-center gap-3 text-xs text-[var(--gp-slate)]">
                 <span className="flex items-center gap-1.5">
                   <span className="inline-block h-2 w-2 rounded-full bg-[var(--gp-blue)]" />
-                  Turno ({formatMxn(shiftCumulativeMxn)})
-                </span>
-                <span className="flex items-center gap-1.5">
-                  <span className="inline-block h-2 w-2 rounded-full bg-[var(--gp-teal)]" />
-                  Meta Horaria
+                  {period === "hoy" ? "Hoy" : period === "7d" ? "7 días" : "4 semanas"} ({formatMxn(periodTotalMxn)})
                 </span>
               </div>
             </div>
@@ -540,31 +504,14 @@ export function MerchantDashboard({
 
                 <path d={areaPath} fill="url(#gpOverviewFill)" />
                 <path
-                  d={targetLinePath}
-                  fill="none"
-                  stroke="#02BEC8"
-                  strokeWidth="1.75"
-                  strokeDasharray="4 4"
-                />
-                <path
                   d={linePath}
                   fill="none"
                   stroke="#026EFB"
                   strokeWidth="2.25"
                 />
 
-                {svgPoints.map(({ x, y, targetY, bucket }) => (
-                  <g key={bucket.hourLabel}>
-                    <rect
-                      x={x - 3}
-                      y={targetY - 3}
-                      width="6"
-                      height="6"
-                      rx="1"
-                      fill="#FFFFFF"
-                      stroke="#02BEC8"
-                      strokeWidth="1.75"
-                    />
+                {svgPoints.map(({ x, y, bucket }) => (
+                  <g key={bucket.key}>
                     <rect
                       x={x - 3.5}
                       y={y - 3.5}
@@ -583,7 +530,7 @@ export function MerchantDashboard({
                       fontSize="10"
                       fontWeight="600"
                     >
-                      {formatMxn(bucket.totalMxn)}
+                      {bucket.count > 0 ? formatMxn(bucket.totalMxn) : ""}
                     </text>
                     <text
                       x={x}
@@ -593,10 +540,23 @@ export function MerchantDashboard({
                       fontSize="10.5"
                       opacity="0.8"
                     >
-                      {bucket.hourLabel}
+                      {bucket.label}
                     </text>
                   </g>
                 ))}
+                {seriesIsEmpty && (
+                  <text
+                    x="292"
+                    y="92"
+                    textAnchor="middle"
+                    fill="#27354B"
+                    fontSize="12"
+                    opacity="0.75"
+                    data-testid="chart-empty-state"
+                  >
+                    Aún no hay cobros confirmados en este periodo
+                  </text>
+                )}
               </svg>
             </div>
           </CardContent>
@@ -648,7 +608,9 @@ export function MerchantDashboard({
               <div className="flex items-end justify-between">
                 <div>
                   <p className="font-mono text-xs tracking-widest text-white/90">
-                    ••••  ••••  ••••  5713
+                    {merchantClabeLast4
+                      ? `••••  ••••  ••••  ${merchantClabeLast4}`
+                      : "CLABE no configurada"}
                   </p>
                   <p className="mt-0.5 text-[10px] uppercase tracking-wider text-white/65">
                     Comercio · Solo clabeLast4
@@ -683,6 +645,7 @@ export function MerchantDashboard({
                 </span>
               </div>
 
+              {merchantClabeLast4 && (
               <button
                 type="button"
                 onClick={handleCopyClabe}
@@ -696,10 +659,11 @@ export function MerchantDashboard({
                 ) : (
                   <>
                     <Copy className="h-3.5 w-3.5" />
-                    <span>Copiar •••• 5713</span>
+                    <span>Copiar •••• {merchantClabeLast4}</span>
                   </>
                 )}
               </button>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -719,77 +683,69 @@ export function MerchantDashboard({
             <div className="flex items-center justify-between">
               <CardTitle className="flex items-center gap-2 text-base font-semibold">
                 <ArrowLeftRight className="h-4 w-4 text-[var(--gp-slate)]" />
-                <span>Movimiento por Hora</span>
+                <span>
+                  {period === "hoy"
+                    ? "Movimiento por Hora"
+                    : period === "7d"
+                      ? "Movimiento por Día"
+                      : "Movimiento por Semana"}
+                </span>
               </CardTitle>
               <span className="rounded-md bg-[#112645]/[0.05] px-2 py-0.5 text-[11px] font-medium text-[var(--gp-slate)]">
-                Turno Hoy
+                {period === "hoy" ? "Hoy" : period === "7d" ? "7D" : "30D"}
               </span>
             </div>
             <div className="mt-1 flex items-center gap-2">
               <span className="text-xs text-[var(--gp-slate)]">Flujo Neto</span>
               <span className="inline-flex items-center gap-0.5 rounded-full bg-[var(--gp-mint)] px-2 py-0.5 text-xs font-semibold tabular-nums text-[var(--gp-navy)]">
-                +{formatMxn(shiftCumulativeMxn)}
+                +{formatMxn(periodTotalMxn)}
               </span>
             </div>
           </CardHeader>
 
           <CardContent className="space-y-4">
             {/* Barras agrupadas estilo MoneyMovement */}
-            <div className="grid h-36 grid-cols-5 items-end gap-2.5 border-b border-[#112645]/[0.08] pb-2 pt-2">
+            <div
+              className="relative grid h-36 items-end gap-2.5 border-b border-[#112645]/[0.08] pb-2 pt-2"
+              style={{
+                gridTemplateColumns: `repeat(${Math.max(1, hourlySeries.length)}, minmax(0, 1fr))`,
+              }}
+            >
               {hourlySeries.map((bucket) => {
-                const actualH = Math.max(
-                  14,
-                  Math.round((bucket.totalMxn / maxBucketMxn) * 100),
-                );
-                const targetH = Math.max(
-                  10,
-                  Math.round((bucket.targetMxn / maxBucketMxn) * 100),
-                );
+                const actualH =
+                  bucket.count > 0
+                    ? Math.max(8, Math.round((bucket.totalMxn / maxBucketMxn) * 100))
+                    : 0;
                 return (
                   <div
-                    key={bucket.hourLabel}
+                    key={bucket.key}
                     className="flex h-full flex-col items-center justify-end"
                   >
                     <div className="flex h-28 w-full items-end justify-center gap-1">
                       <div
                         className="w-2.5 rounded-t bg-[var(--gp-blue)] transition-all"
                         style={{ height: `${actualH}%` }}
-                        title={`Cobrado: ${formatMxn(bucket.totalMxn)}`}
-                      />
-                      <div
-                        className="w-2.5 rounded-t bg-[var(--gp-teal)]/55 transition-all"
-                        style={{ height: `${targetH}%` }}
-                        title={`Meta: ${formatMxn(bucket.targetMxn)}`}
+                        title={`Cobrado: ${formatMxn(bucket.totalMxn)} · ${bucket.count} cobros`}
                       />
                     </div>
                     <span className="mt-1.5 text-[10px] font-medium text-[var(--gp-slate)]">
-                      {bucket.hourLabel}
+                      {bucket.label}
                     </span>
                   </div>
                 );
               })}
+              {seriesIsEmpty && (
+                <span className="absolute inset-x-0 top-1/3 text-center text-xs text-[var(--gp-slate)]">
+                  Sin cobros confirmados en este periodo
+                </span>
+              )}
             </div>
 
-            {/* Meta del Turno estilo SpendingLimit */}
-            <div className="space-y-2">
-              <div className="flex items-baseline justify-between text-xs">
-                <span className="text-[var(--gp-slate)]">
-                  Meta de Cobro del Turno
-                </span>
-                <span className="font-semibold tabular-nums text-[var(--gp-navy)]">
-                  {formatMxn(summary.paidTotalMxn)} / {formatMxn(shiftBudget)}
-                </span>
-              </div>
-              <div className="h-2 w-full overflow-hidden rounded-full bg-[#112645]/[0.08]">
-                <div
-                  className="gp-gradient-bg h-full rounded-full transition-all"
-                  style={{ width: `${Math.max(16, shiftGoalPct)}%` }}
-                />
-              </div>
-              <div className="flex items-center justify-between text-[11px] text-[var(--gp-slate)]">
-                <span>WakeLock: {wakeLockActive ? "Activo" : "Listo"}</span>
-                <span>0% Comisión Banxico</span>
-              </div>
+            <div className="flex items-center justify-between text-[11px] text-[var(--gp-slate)]">
+              <span>WakeLock: {wakeLockActive ? "Activo" : "Listo"}</span>
+              <span>
+                {summary.paidCount + summary.lateCount} cobros confirmados en total
+              </span>
             </div>
           </CardContent>
         </Card>
@@ -807,7 +763,7 @@ export function MerchantDashboard({
             </CardTitle>
             <span className="inline-flex items-center gap-1 rounded-full bg-[var(--gp-mint)] px-2 py-0.5 text-[11px] font-semibold text-[var(--gp-navy)]">
               <TrendingUp className="h-3 w-3" />
-              +4 pts
+              {isMock ? "Mock" : "En vivo"}
             </span>
           </CardHeader>
 
@@ -884,10 +840,10 @@ export function MerchantDashboard({
               </svg>
               <div className="absolute bottom-0 flex flex-col items-center">
                 <span className="gp-amount-display text-2xl font-bold text-[var(--gp-navy)]">
-                  {healthScore}
+                  {gaugeValue === null ? "—" : `${gaugeValue}%`}
                 </span>
                 <span className="text-[11px] font-medium text-[var(--gp-slate)]">
-                  Excelente
+                  {gaugeValue === null ? "Sin cobros cerrados" : "Pagos confirmados"}
                 </span>
               </div>
             </div>
@@ -907,17 +863,18 @@ export function MerchantDashboard({
                     <span className="flex-1 truncate text-xs font-medium text-[var(--gp-navy)]">
                       {factor.label}
                     </span>
-                    <div className="h-1.5 w-14 overflow-hidden rounded-full bg-[#112645]/[0.08]">
-                      <div
-                        className="h-full rounded-full"
-                        style={{
-                          width: `${factor.score}%`,
-                          backgroundColor: factor.color,
-                        }}
-                      />
-                    </div>
-                    <span className="w-7 text-right text-[11px] font-semibold tabular-nums text-[var(--gp-navy)]">
-                      {factor.score}
+                    <span
+                      className={`inline-block h-2 w-2 shrink-0 rounded-full ${
+                        factor.ok === null
+                          ? "bg-[#112645]/25"
+                          : factor.ok
+                            ? "bg-[#0ADDA9]"
+                            : "bg-[#F5A524]"
+                      }`}
+                      aria-hidden="true"
+                    />
+                    <span className="text-right text-[11px] font-semibold tabular-nums text-[var(--gp-navy)]">
+                      {factor.value}
                     </span>
                   </div>
                 );

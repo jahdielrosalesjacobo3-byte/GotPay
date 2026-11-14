@@ -5,16 +5,41 @@ import {
   listRecentCharges,
 } from "@/lib/db/store";
 import { createChargeFromRequest } from "@/lib/db/lifecycle";
+import type { GotPayCharge } from "@/types/gotpay";
 import { NextResponse } from "next/server";
 
 export const runtime = "nodejs";
 
-export async function GET(): Promise<Response> {
+export const dynamic = "force-dynamic";
+
+const DEFAULT_LIST_LIMIT = 50;
+const MAX_LIST_LIMIT = 200;
+
+function parseLimit(raw: string | null): number {
+  const n = Number.parseInt(raw ?? "", 10);
+  if (!Number.isFinite(n) || n <= 0) return DEFAULT_LIST_LIMIT;
+  return Math.min(n, MAX_LIST_LIMIT);
+}
+
+/** Vista pública de un cobro: sin CLABE completa (solo last4 + bankCode) ni teléfono sin máscara. */
+function toPublicCharge(charge: GotPayCharge): GotPayCharge {
+  const last4 = charge.clabeLast4?.replace(/\D/g, "").slice(-4);
+  return {
+    ...charge,
+    clabeLast4: last4 && last4.length === 4 ? last4 : undefined,
+  };
+}
+
+export async function GET(req: Request): Promise<Response> {
+  const limit = parseLimit(new URL(req.url).searchParams.get("limit"));
   const [charges, summary] = await Promise.all([
-    listRecentCharges(),
+    listRecentCharges(limit),
     computeChargesSummary(),
   ]);
-  return NextResponse.json({ charges, summary }, { status: 200 });
+  return NextResponse.json(
+    { charges: charges.map(toPublicCharge), summary },
+    { status: 200, headers: { "Cache-Control": "no-store" } },
+  );
 }
 
 export async function POST(req: Request): Promise<Response> {

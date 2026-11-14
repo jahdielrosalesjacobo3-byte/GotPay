@@ -47,8 +47,24 @@ export function useGotPayPos(initialMode: EngineMode = "api") {
     getHardwareState(),
   );
 
-  const [charges, setCharges] = useState<GotPayCharge[]>(() =>
+  // Listas separadas: «API Real» solo muestra cobros del servidor (Supabase);
+  // los cobros de ejemplo viven únicamente en «Mock Local».
+  const [realCharges, setRealCharges] = useState<GotPayCharge[]>([]);
+  const [mockCharges, setMockCharges] = useState<GotPayCharge[]>(() =>
     createInitialMockCharges(),
+  );
+  const engineModeRef = useRef<EngineMode>(initialMode);
+  engineModeRef.current = engineMode;
+  const charges = engineMode === "mock" ? mockCharges : realCharges;
+  const setCharges = useCallback(
+    (updater: (prev: GotPayCharge[]) => GotPayCharge[]) => {
+      if (engineModeRef.current === "mock") {
+        setMockCharges(updater);
+      } else {
+        setRealCharges(updater);
+      }
+    },
+    [],
   );
   const [activeCharge, setActiveCharge] = useState<GotPayCharge | null>(null);
   const [overlayCharge, setOverlayCharge] = useState<GotPayCharge | null>(null);
@@ -73,7 +89,7 @@ export function useGotPayPos(initialMode: EngineMode = "api") {
 
   const handleConfirmedTransition = useCallback((charge: GotPayCharge) => {
     const clean = sanitizeChargeForUi(charge);
-    setCharges((prev) => upsertChargeList(prev, clean));
+    setRealCharges((prev) => upsertChargeList(prev, clean));
     setActiveCharge((prev) => (prev && prev.id === clean.id ? null : prev));
     setOverlayCharge(clean);
     void announceCharge(clean);
@@ -84,7 +100,7 @@ export function useGotPayPos(initialMode: EngineMode = "api") {
       switch (event.type) {
         case "charge.created": {
           const clean = sanitizeChargeForUi(event.charge);
-          setCharges((prev) => upsertChargeList(prev, clean));
+          setRealCharges((prev) => upsertChargeList(prev, clean));
           break;
         }
         case "charge.paid": {
@@ -96,7 +112,7 @@ export function useGotPayPos(initialMode: EngineMode = "api") {
           break;
         }
         case "charge.expired": {
-          setCharges((prev) =>
+          setRealCharges((prev) =>
             prev.map((c) =>
               c.id === event.chargeId ? { ...c, status: "EXPIRED" } : c,
             ),
@@ -125,17 +141,18 @@ export function useGotPayPos(initialMode: EngineMode = "api") {
   // Carga inicial desde GET /api/charges
   const fetchChargesList = useCallback(async () => {
     try {
-      const res = await fetch("/api/charges", { cache: "no-store" });
+      const res = await fetch("/api/charges?limit=200", { cache: "no-store" });
       if (!res.ok) {
         return;
       }
       const data = (await res.json()) as {
         charges?: GotPayCharge[];
       };
-      if (Array.isArray(data.charges) && data.charges.length > 0) {
-        setCharges((prev) => {
+      if (Array.isArray(data.charges)) {
+        const serverCharges = data.charges;
+        setRealCharges((prev) => {
           let next = [...prev];
-          for (const item of data.charges ?? []) {
+          for (const item of serverCharges) {
             next = upsertChargeList(next, item);
           }
           return next;
@@ -385,9 +402,17 @@ export function useGotPayPos(initialMode: EngineMode = "api") {
         transactionId: charge.transactionId ?? `sim-tx-${Date.now()}`,
         trackingKey: charge.trackingKey ?? `GOTPAYSIM${charge.numRef}`,
       };
-      handleConfirmedTransition(updated);
+      const clean = sanitizeChargeForUi(updated);
+      if (engineModeRef.current === "mock") {
+        setMockCharges((prev) => upsertChargeList(prev, clean));
+        setActiveCharge((prev) => (prev && prev.id === clean.id ? null : prev));
+      }
+      // En «API Real» la simulación solo reproduce overlay + voz: nunca inserta
+      // ni modifica cobros en la lista real (que solo cambia por el servidor).
+      setOverlayCharge(clean);
+      void announceCharge(clean);
     },
-    [handleConfirmedTransition],
+    [],
   );
 
   const triggerSseReconnectTest = useCallback(() => {
