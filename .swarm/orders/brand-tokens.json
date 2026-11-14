@@ -1,0 +1,23 @@
+{
+  "source": "Muestreo de pixeles de public/brand/source/*.jpg (2752x1536) por GotPay Agent, 2026-11-14. Colores tomados de los logos oficiales; amber/danger son propuestas funcionales, no vienen del logo.",
+  "brand": {
+    "navy":      { "hex": "#112645", "use": "Texto 'Got', texto principal, fondos oscuros" },
+    "slate":     { "hex": "#27354B", "use": "Tagline 'YA CAYÓ', texto secundario" },
+    "blue":      { "hex": "#026EFB", "use": "Inicio del degradado (lado azul del ícono)" },
+    "teal":      { "hex": "#02BEC8", "use": "Punto medio del degradado" },
+    "mint":      { "hex": "#0ADDA9", "use": "Fin del degradado (lado verde del ícono)" },
+    "payGreen":  { "hex": "#0CD6A7", "use": "Texto 'Pay' del wordmark" },
+    "white":     { "hex": "#FFFFFF", "use": "Fondo de los logos" }
+  },
+  "gradient": "linear-gradient(135deg, #026EFB 0%, #02BEC8 50%, #0ADDA9 100%)",
+  "functional": {
+    "paidBg":   { "hex": "#0ADDA9", "fg": "#112645", "contrast": 8.6,  "origin": "marca" },
+    "lateBg":   { "hex": "#F5A524", "fg": "#112645", "contrast": 7.42, "origin": "propuesta (no está en el logo)" },
+    "pendingBg":{ "hex": "#112645", "fg": "#FFFFFF", "contrast": 15.14, "origin": "marca" }
+  },
+  "contrastRules": [
+    "#0CD6A7 / #0ADDA9 sobre blanco = 1.88:1 -> PROHIBIDO para texto sobre fondo claro; solo decorativo o como fondo con texto navy.",
+    "#026EFB sobre blanco = 4.54:1 -> válido solo para texto >= 18px o botones; no para texto pequeño crítico.",
+    "Navy #112645 sobre blanco = 15.14:1 y sobre mint = 8.6:1 -> usar para todo monto, folio y estado legible a 2 m."
+  ]
+}

@@ -1,0 +1,325 @@
+{
+  "schemaVersion": 2,
+  "project": {
+    "name": "GotPay",
+    "meaning": "Ya me pagaron / Ya cayo",
+    "workspaceRoot": "/Users/jahdielrosales/Documents/CURSOR-HACKATON",
+    "repoUrl": "https://github.com/jahdielrosalesjacobo3-byte/GotPay.git",
+    "masterPlanPath": "/Users/jahdielrosales/Documents/CURSOR-HACKATON/.swarm/MASTER_PLAN.md",
+    "workpacksDir": "/Users/jahdielrosales/Documents/CURSOR-HACKATON/.swarm/workpacks",
+    "ordersDir": "/Users/jahdielrosales/Documents/CURSOR-HACKATON/.swarm/orders",
+    "hackathon": "Hackaton Mexico 2026 (pey + CoDi)",
+    "mode": "solo-greenfield",
+    "employerResourcesAllowed": false,
+    "brandTokensPath": ".swarm/orders/brand-tokens.json"
+  },
+  "governance": {
+    "orchestrator": "GotPay Agent",
+    "orchestratorHost": "Grok Bot.app",
+    "authorizedAgents": [
+      "GotPay Agent",
+      "Cursor AI",
+      "Antigravity",
+      "Muse"
+    ],
+    "excludedAgents": [
+      "Claude Code",
+      "Gemini CLI"
+    ],
+    "secretPolicy": "PEY_API_KEY and PEY_WEBHOOK_SECRET live ONLY in .env.local (chmod 600). No agent may read, print, log, or copy secret values into prompts, commits, canvases, or AgentStore."
+  },
+  "peyStatus": {
+    "baseUrl": "https://api.pey.mx",
+    "apiKeyConfiguredInEnvLocal": true,
+    "apiConnectivityVerified": true,
+    "webhookSecretConfigured": true,
+    "notes": "Webhook API key Cursor re-registrado 2026-11-14 14:00 CST con secreto regenerado (via boton regenerar del dialogo del engrane; unica forma de cambiar URL). Secreto solo en .env.local (600).",
+    "webhookUrl": "https://read-birth-donations-procedures.trycloudflare.com/api/webhooks/pey"
+  },
+  "phase": "MVP_DISPATCH_ACTIVE",
+  "deadlines": {
+    "mvpPitch": "2026-11-15 (manana, demo en vivo con cobro real $0.01 MXN)",
+    "bountiesPublishBy": "2026-11-30",
+    "featureFreeze": "2026-12-07",
+    "nationalApplicationClose": "2026-12-10T23:59:00-06:00",
+    "targetFullSubmission": "2026-12-11T20:00:00-06:00",
+    "nationalSubmissionClose": "2026-12-12T23:59:00-06:00",
+    "resultsAndBanxicoRule": "2026-12-14"
+  },
+  "ownership": {
+    "GotPay Agent": [
+      ".swarm/SWARM_STATE.json",
+      ".swarm/orders/**",
+      ".swarm/decisions/**"
+    ],
+    "Cursor AI": [
+      "package.json",
+      "tsconfig.json",
+      "next.config.ts",
+      "postcss.config.mjs",
+      "src/types/gotpay.ts",
+      "src/lib/pey/**",
+      "src/lib/db/**",
+      "src/lib/events/**",
+      "src/app/api/**"
+    ],
+    "Antigravity": [
+      "src/app/page.tsx",
+      "src/app/layout.tsx",
+      "src/app/globals.css",
+      "src/app/jurado/**",
+      "src/components/**",
+      "src/lib/audio/**"
+    ],
+    "Muse": [
+      "public/brand/**",
+      "public/sounds/**",
+      ".swarm/briefs/**",
+      ".swarm/pitch/**"
+    ]
+  },
+  "apiContracts": {
+    "createCharge": "POST /api/charges -> 201 { charge: GotPayCharge }",
+    "listCharges": "GET /api/charges -> 200 { charges: GotPayCharge[], summary }",
+    "getCharge": "GET /api/charges/[id] -> 200 { charge: GotPayCharge }",
+    "reconcileCharge": "POST /api/charges/[id]/reconcile -> 200 { charge: GotPayCharge, reconciled: boolean }",
+    "cancelCharge": "POST /api/charges/[id]/cancel -> 200 { charge: GotPayCharge }",
+    "peyWebhook": "POST /api/webhooks/pey (Standard Webhooks raw body + webhook-id & transactionId idempotency + clabeLast4 masking)",
+    "realtimeSse": "GET /api/events -> text/event-stream (GotPayRealtimeEvent)",
+    "health": "GET /api/health -> 200 { ok, peyApiKeyConfigured, peyWebhookSecretConfigured } (sin valores de secretos)"
+  },
+  "activeLocks": [],
+  "waves": [
+    {
+      "id": "MVP-W1",
+      "phase": "MVP_24H",
+      "owner": "Cursor AI",
+      "workpack": ".swarm/workpacks/cursor-ai.md",
+      "status": "completed",
+      "goal": "Bootstrap Next.js 15 + TS, cliente tipado pey (codi/qr, codi/pn, transaction), receptor Standard Webhooks idempotente, store local y SSE /api/events.",
+      "exitGate": "tsc --noEmit limpio + QR real $0.01 MXN HTTP 201 + doble envio de webhook idempotente.",
+      "order": ".swarm/orders/01-cursor-ai.md"
+    },
+    {
+      "id": "MVP-W2",
+      "phase": "MVP_24H",
+      "owner": "Antigravity",
+      "workpack": ".swarm/workpacks/antigravity.md",
+      "status": "completed",
+      "goal": "Caja tactil GotPay de alto contraste, apertura de turno con desbloqueo de bocina + wakeLock, QR gigante, envio push al celular, overlay verde/ambar y locucion en espanol.",
+      "exitGate": "Flujo completo en navegador movil/desktop con reconexion SSE + polling cada 2 s.",
+      "order": ".swarm/orders/02-antigravity.md"
+    },
+    {
+      "id": "MVP-W2R",
+      "phase": "MVP_24H",
+      "owner": "Antigravity",
+      "workpack": ".swarm/workpacks/antigravity.md",
+      "status": "completed",
+      "goal": "Rediseñar la UI de GotPay (caja táctil, historial del turno, dashboard del comercio y Modo Jurado) con calidad profesional de fintech, usando Horizon y shadcn-fintech SOLO como referencia visual/de patrones (sin copiar código literal; clones solo en ~/Documents/gotpay-refs/; sin crédito por ahora).",
+      "exitGate": "G2R: tsc limpio, npm test verde, npm run build ok, capturas móvil/desktop de caja, dashboard y overlays PAID/PAID_LATE, flujo con mocks completo, y sin código copiado de los repos de referencia.",
+      "order": ".swarm/orders/05-antigravity-REDISENO.md"
+    },
+    {
+      "id": "MVP-W3",
+      "phase": "MVP_24H",
+      "owner": "Muse",
+      "workpack": ".swarm/workpacks/muse.md",
+      "status": "completed",
+      "goal": "Procesar los 3 logos oficiales de public/brand/source/ (SVG + PNG transparente + favicon/PWA + tokens de color sin tocar el diseno), sonidos de confirmacion/pago tardio y guion de 90 s para manana.",
+      "exitGate": "Activos en public/brand, public/sounds y .swarm/pitch sin usar 'pey' ni 'CoDi' en la marca.",
+      "order": ".swarm/orders/03-muse.md"
+    },
+    {
+      "id": "MVP-W4",
+      "phase": "MVP_24H",
+      "owner": "Cursor AI + GotPay Agent",
+      "workpack": ".swarm/workpacks/cursor-ai.md",
+      "status": "in_progress",
+      "goal": "Deploy en Vercel / tunel HTTPS, alta de webhook en portal.mipey.mx, 3 cobros reales de $0.01 MXN extremo a extremo, Semgrep, push a GotPay.git y video respaldo de 45 s.",
+      "exitGate": "Latencia escaneo->voz < 3 s sobre red movil y repositorio sincronizado sin secretos.",
+      "blockedBy": [],
+      "order": ".swarm/orders/04-cursor-ai-W4-prep.md",
+      "notes": "Tunel https://read-birth-donations-procedures.trycloudflare.com -> :3000 (build con rediseno). Webhook pey apunta a https://read-birth-donations-procedures.trycloudflare.com/api/webhooks/pey. Pendiente: 3 cobros $0.01, Semgrep/gitleaks, push, video 45 s. Si cloudflared se reinicia hay que regenerar secreto y re-registrar."
+    },
+    {
+      "id": "MES-S1",
+      "phase": "NATIONAL_DEC12",
+      "window": "2026-11-16..2026-11-22",
+      "owner": "Cursor AI + GotPay Agent",
+      "status": "planned",
+      "goal": "Migracion a Supabase Postgres personal, activacion de CLABE personal en pey y reconciliador automatico de transacciones."
+    },
+    {
+      "id": "MES-S2",
+      "phase": "NATIONAL_DEC12",
+      "window": "2026-11-23..2026-11-29",
+      "owner": "Antigravity + Cursor AI",
+      "status": "planned",
+      "goal": "Modo Mostrador Emparejado (bocina dedicada + celular cajero), catalogo rapido de 1 toque, dictado por voz y corte de caja CSV/PDF."
+    },
+    {
+      "id": "MES-S3",
+      "phase": "NATIONAL_DEC12",
+      "window": "2026-11-30..2026-12-06",
+      "owner": "GotPay Agent + Todo el Enjambre",
+      "status": "planned",
+      "goal": "Evaluacion de Bounties (30 nov), endurecimiento de casos borde (PAID_LATE, expirados, duplicados, devolucion), Semgrep/CSP/rate-limit y piloto real en comercio."
+    },
+    {
+      "id": "MES-S4",
+      "phase": "NATIONAL_DEC12",
+      "window": "2026-12-07..2026-12-12",
+      "owner": "GotPay Agent + Antigravity + Muse",
+      "status": "planned",
+      "goal": "Feature freeze (7 dic), Modo Jurado /jurado sin login ($0.01 MXN), Postulacion (<=10 dic 23:59), video <=3 min, instrucciones <=1000 palabras y entrega congelada el 11 dic."
+    }
+  ],
+  "handoffLog": [
+    {
+      "timestamp": "2026-11-14T12:20:00-06:00",
+      "actor": "Cursor AI",
+      "event": "Initialized GotPay greenfield workspace, secured .env.local, verified live pey API auth, and prepared swarm connectors awaiting GotPay Agent activation and user confirmation."
+    },
+    {
+      "timestamp": "2026-11-14T12:26:45-06:00",
+      "actor": "GotPay Agent",
+      "event": "GotPay Agent asumió el mando del enjambre como Orquestador Único (Cursor AI, Antigravity, Muse; excluidos Claude Code y Gemini CLI). Revisados SWARM_STATE.json, AGENTS.md y src/types/gotpay.ts. En espera de la confirmación del usuario para arrancar las olas MVP (wave-1..3) y el plan del mes (wave-4)."
+    },
+    {
+      "timestamp": "2026-11-14T12:33:44-06:00",
+      "actor": "GotPay Agent",
+      "event": "Recibidos los 3 logos oficiales de GotPay y guardados en public/brand/source/ (gotpay-icon.jpg, gotpay-lockup-horizontal.jpg, gotpay-wordmark.jpg). Asignada tarea a Muse en MVP-W3: pasarlos a SVG, exportar PNG transparente, generar iconos PWA/favicon y extraer colores de marca para Antigravity."
+    },
+    {
+      "timestamp": "2026-11-14T12:34:30-06:00",
+      "actor": "Cursor AI",
+      "event": "Published detailed Master Plan (.swarm/MASTER_PLAN.md) and agent workpacks (.swarm/workpacks/{cursor-ai,antigravity,muse}.md) covering MVP-W1..W4 (24h) and MES-S1..S4 (4 weeks), integrating the 3 official brand assets in public/brand/source/. Handing over to GotPay Agent to issue active orchestration orders in .swarm/orders/."
+    },
+    {
+      "timestamp": "2026-11-14T12:38:07-06:00",
+      "actor": "GotPay Agent",
+      "event": "DESPACHO-001 emitido: orquestación activa sobre Cursor AI, Antigravity y Muse (sin Claude Code ni Gemini CLI, sin lectura de .env.local). Órdenes en .swarm/orders/ (00-DESPACHO-001, 01-cursor-ai, 02-antigravity, 03-muse) y colores oficiales medidos de los logos en orders/brand-tokens.json. MVP-W1, W2 (fase A) y W3 despachadas; W4 bloqueada hasta G1+G2."
+    },
+    {
+      "timestamp": "2026-11-14T12:50:00-06:00",
+      "actor": "Cursor AI",
+      "event": "MVP-W1 in_progress. Confirmacion para Antigravity: firmas HTTP de MASTER_PLAN §2.2 sin cambios — POST/GET /api/charges, GET /api/charges/[id], POST reconcile/cancel, POST /api/webhooks/pey, GET /api/events (SSE). Payloads alineados a src/types/gotpay.ts."
+    },
+    {
+      "timestamp": "2026-11-14T12:54:00-06:00",
+      "actor": "Cursor AI",
+      "event": "G1 MVP-W1 gate_passed — tsc --noEmit: 0 errores; vitest 4/4 (webhook-id duplicado => 1 evento charge.paid; metadata.clabe 18 digitos ausente en store/SSE; clabeLast4=5713 en sanitizacion); Semgrep src/lib+api: 0 hallazgos; QR real unico $0.01 MXN POST /api/charges => HTTP 201 (chargeId 01M7DPECNAD9GGS2ZCWKDK2VZ4, codiQrId 35572689b8, status PENDING). Antigravity desbloqueado para W2 fase B. layout/page minimos solo bootstrap — reemplazar en W2."
+    },
+    {
+      "timestamp": "2026-11-14T12:57:51-06:00",
+      "actor": "GotPay Agent",
+      "event": "Auditoría independiente de G1: tsc --noEmit 0 errores, vitest 4/4, sin referencias a .env.local/sk_live/NEXT_PUBLIC_PEY en src, .env.local ignorado por git. MVP-W1 marcada completed. Observación para W4: el store es en memoria; en Vercel serverless el webhook y el SSE pueden caer en instancias distintas, así que antes de W4 Cursor AI debe usar almacenamiento compartido (Supabase/Upstash) o un host de proceso único/túnel. Nota: layout.tsx/page.tsx mínimos creados por Cursor AI pasan a Antigravity."
+    },
+    {
+      "timestamp": "2026-11-14T12:58:44-06:00",
+      "actor": "GotPay Agent (rol Muse)",
+      "to": "Antigravity",
+      "event": "MVP-W3 G3 entregado: public/brand/ (PNG transparentes 1x/2x, versión oscura, SVG que embeben PNG porque la vectorización deformaba el degradado y las letras, icons/ PWA 192/512/maskable/apple-touch/favicon, manifest-icons.json, tokens.json), public/sounds/paid-chime.wav (560 ms) y late-alert.wav (720 ms), .swarm/pitch/pitch-manana-90s.md (201 palabras). Antigravity: ya puede sustituir los JPG por public/brand/*.png, usar tokens.json, los íconos PWA y los WAV en announcer.ts."
+    },
+    {
+      "timestamp": "2026-11-14T13:01:23-06:00",
+      "actor": "GotPay Agent",
+      "event": "Jahdiel leyó el guion en voz alta dentro de 90 s. MVP-W3 marcada completed."
+    },
+    {
+      "timestamp": "2026-11-14T13:03:30-06:00",
+      "actor": "Cursor AI",
+      "event": "ORDEN 04 W4-prep: persistencia atomica en .data/gotpay.json (cobros + processed_webhooks; desactivada bajo VITEST); scripts npm run demo (build + next start :3000) y npm run tunnel (cloudflared quick tunnel o instrucciones brew); GET /api/health con flags PEY_API_KEY/PEY_WEBHOOK_SECRET; .gitignore .data/ y .swarm/logs/. tsc --noEmit y vitest 6/6 verdes; Semgrep store+persistence+health: 0 hallazgos. Sin deploy, webhook pey, push ni lectura de .env.local. MVP-W4 sigue blocked (espera G2)."
+    },
+    {
+      "timestamp": "2026-11-14T13:16:30-06:00",
+      "actor": "Antigravity",
+      "to": "GotPay Agent",
+      "event": "G2 MVP-W2 gate_passed (Fase A mocks + Fase B integrada a /api/charges, /api/charges/[id], /reconcile, /cancel y SSE /api/events con polling cada 2s + activos de marca y WAV de Muse integrados). Evidencia G2: (1) tsc --noEmit: 0 errores, vitest 6/6, next build OK, Semgrep: 0 hallazgos; (2) Chrome desktop (1280x800) y móvil (390x844) en http://localhost:3088 y /jurado con 0 errores de consola; (3) Reconexión automática SSE verificada + contador de polling cada 2s (#0 -> #1 -> #2); (4) Locución es-MX verificada en vivo y en tests para $0.01 ('un centavo'), $20 ('veinte pesos'), $85.50 ('ochenta y cinco pesos con cincuenta centavos') y PAID_LATE ('Atención en GotPay: pago tardío de cincuenta pesos, revisar orden'); (5) Contraste navy #112645 sobre mint #0ADDA9 (8.6:1), amber #F5A524 (7.42:1) y blanco #FFFFFF (15.14:1) respetando brand-tokens.json; (6) Privacidad verificada: solo clabeLast4 ('•••• 5713') y payerPhoneMasked ('***1234'), cero exposición de CLABE de 18 dígitos ni lectura de .env.local. Capturas en browser_evidence/fde2af92-7942-467a-a686-5173756d3dad/final_step_32.png. Listo para cierre de G2 por GotPay Agent y arranque de MVP-W4."
+    },
+    {
+      "timestamp": "2026-11-14T13:20:30-06:00",
+      "actor": "GotPay Agent",
+      "event": "Auditoría independiente de G2 (snapshot previo al rediseño): npx tsc --noEmit 0 errores; vitest 6/6 verde; en src/ no hay .env.local, sk_live ni NEXT_PUBLIC_PEY. La única CLABE de 18 dígitos está en fixtures de prueba (src/lib/pey/webhooks.test.ts y src/lib/db/webhook-idempotency.test.ts) para verificar que solo se persiste clabeLast4; la UI usa clabeLast4 enmascarado. MVP-W2 marcada completed."
+    },
+    {
+      "timestamp": "2026-11-14T13:20:30-06:00",
+      "actor": "GotPay Agent",
+      "to": "Antigravity",
+      "event": "DESPACHO MVP-W2R: orden .swarm/orders/05-antigravity-REDISENO.md (prompt 05-antigravity-REDISENO-PROMPT.txt). Antigravity debe rediseñar caja, historial, dashboard y Modo Jurado con calidad fintech, usando https://github.com/adrianhajdin/banking y https://github.com/abderrahimghazali/shadcn-fintech SOLO como referencia visual/de patrones, clonados únicamente en ~/Documents/gotpay-refs/ (nunca dentro del repo). PROHIBIDO copiar código, archivos, componentes o assets de forma literal; todo se reescribe desde cero. shadcn/ui por CLI oficial sí está permitido. Sin crédito por ahora (no THIRD_PARTY_NOTICES.md ni menciones en README/UI/commits/código). Sin Plaid/Appwrite/Dwolla/Sentry ni lectura de .env.local. Ola MVP-W2R status dispatched."
+    },
+    {
+      "timestamp": "2026-11-14T13:24:00-06:00",
+      "actor": "Antigravity",
+      "to": "GotPay Agent",
+      "event": "MVP-W2R in_progress: iniciando rediseño profesional fintech de Caja Táctil, Dashboard de Comercio, Tabla de Transacciones y Modo Jurado (/jurado) con paleta oficial de brand-tokens.json, manteniendo intactos contratos src/types/gotpay.ts, useGotPayPos, SSE /api/events + polling 2s y announcer es-MX."
+    },
+    {
+      "timestamp": "2026-11-14T13:42:00-06:00",
+      "actor": "GotPay Agent",
+      "to": "Jahdiel",
+      "event": "MVP-W4 in_progress: cloudflared 2026.11.0 instalado; app en localhost:3000 (next start) y tunel https://adjust-posting-pichunter-uses.trycloudflare.com; /api/health ok con apiKey y webhookSecret configurados (true); webhook registrado en portal pey a https://adjust-posting-pichunter-uses.trycloudflare.com/api/webhooks/pey (secreto escrito solo en .env.local, sin exponer); autoprueba de firma ok (firmada pasa, falsa 401). Pey no ofrece boton de evento de prueba. Siguiente: 3 cobros reales de $0.01 escaneando con app bancaria."
+    },
+    {
+      "timestamp": "2026-11-14T13:42:30-06:00",
+      "actor": "Antigravity",
+      "to": "GotPay Agent",
+      "event": "G2R MVP-W2R gate_passed: Rediseño profesional fintech de GotPay completado desde cero en src/components/ui/fintech-primitives.tsx, src/components/MerchantDashboard.tsx, src/components/ShiftHistoryStrip.tsx, src/components/PosKeypad.tsx, src/components/ActiveChargeModal.tsx, src/components/PaymentOverlay.tsx, src/app/page.tsx y src/app/jurado/page.tsx. Evidencia G2R: (1) npx tsc --noEmit: 0 errores; npm test: 6/6 verde; npm run build: OK; Semgrep (15 archivos): 0 hallazgos; (2) Layout con sidebar/topbar, 4 tarjetas KPI (Cobrado Hoy, # Cobros Confirmados, Ticket Promedio, En Espera/Tardíos), gráfica horaria interactiva de ingresos del turno, tabla de transacciones con filtros de estado, buscador, chips AA/AAA (texto siempre navy #112645 o blanco sobre navy; cero menta/verde sobre blanco), estados vacíos y skeletons; (3) Capturas verificadas con 0 errores de consola en desktop (1280x800) y móvil (390x844) para Caja POS, Dashboard, Modal QR, Overlay PAID (menta #0ADDA9 + navy #112645), Overlay PAID_LATE (ámbar #F5A524 + navy #112645) y Consola de Jurado (/jurado) en browser_evidence/fde2af92-7942-467a-a686-5173756d3dad/final_step_62.png; (4) Cero código copiado, cero dependencias ajenas, cero exposición de CLABE de 18 dígitos (solo clabeLast4) y cero lectura de .env.local. Listo para cierre de G2R por GotPay Agent."
+    },
+    {
+      "timestamp": "2026-11-14T13:46:31-06:00",
+      "actor": "GotPay Agent",
+      "event": "Auditoría G2R: tsc 0 errores, vitest 6/6, build ok; sin cambios recientes en src/lib ni src/app/api; sin Plaid/Appwrite/Dwolla/Sentry; sin menciones ni coincidencias literales con repos de referencia; sin secretos; mint solo como fondo con texto navy. MVP-W2R completed."
+    },
+    {
+      "at": "2026-11-14T13:50:12-06:00",
+      "by": "GotPay Agent",
+      "event": "MVP-W2R reabierta: Jahdiel rechazó el rediseño (siguió viéndose genérico) y pidió a Antigravity que la UI se vea tal cual como los repos de referencia, conservando paleta GotPay y lógica. G2R se vuelve a auditar al terminar."
+    },
+    {
+      "timestamp": "2026-11-14T13:57:00-06:00",
+      "actor": "GotPay Agent",
+      "to": "Jahdiel",
+      "event": "MVP-W4: tunel nuevo https://read-birth-donations-procedures.trycloudflare.com verificado (/api/health 200, apiKey y webhookSecret true; firma valida pasa, falsa 401 por el tunel). NO se pudo actualizar la URL del webhook en pey: el portal no ofrece edicion de URL sin regenerar el secreto (no se toco). Webhook sigue apuntando al tunel anterior; requiere decision para regenerar secreto y re-registrar."
+    },
+    {
+      "timestamp": "2026-11-14T14:03:00-06:00",
+      "actor": "GotPay Agent",
+      "to": "Jahdiel",
+      "event": "MVP-W4: secreto de webhook regenerado y URL re-registrada en pey a https://read-birth-donations-procedures.trycloudflare.com/api/webhooks/pey; .env.local actualizado sin exponer (600); next reiniciado (npm run demo) sin tocar cloudflared; /api/health 200 por tunel con apiKey y webhookSecret true; firma valida pasa (400 sin transactionId esperado), falsa 401. Listo para 3 cobros reales de $0.01."
+    },
+    {
+      "timestamp": "2026-11-14T15:05:30-06:00",
+      "actor": "Antigravity",
+      "to": "GotPay Agent",
+      "event": "G2R MVP-W2R gate_passed (v2 rediseño total estilo fintech limpio): eliminados por completo los recuadros multicolores, bordes gruesos, franjas de color y calculadoras oscuras. Reconstruidos desde cero src/app/globals.css, src/components/ui/fintech-primitives.tsx, src/components/PosKeypad.tsx, src/components/MerchantDashboard.tsx, src/components/ShiftHistoryStrip.tsx, src/components/ActiveChargeModal.tsx, src/app/page.tsx y src/app/jurado/page.tsx con la arquitectura visual exacta de paneles inset y cuadrícula Bento de 12 columnas: (1) Sidebar inset claro con estado activo degradado (--gp-gradient) y perfil del comercio (CLABE •••• 5713); (2) Fila superior compacta con Anillo Doughnut SVG + Total Cobrado en el Turno y 3 tarjetas KPI de 1px sobre blanco; (3) Bento Fila 1 con Panorama Financiero (curva doble con nodos cuadrados y rejilla punteada, 8 cols) + Tarjeta Terminal CoDi virtual con chip/NFC y selector 1/2 (4 cols); (4) Bento Fila 2 con Cobro Rápido CoDi (avatares circulares de importes frecuentes y teclado monocromático limpio, 4 cols) + Movimiento por Hora y Meta del Turno (4 cols) + Salud Operativa con medidor semicircular SVG 98/100 (4 cols); (5) Bento Fila 3 con tabla de Transacciones Recientes, avatares por fila, filtros y buscador. Verificado: npx tsc --noEmit (0 errores), npm test (6/6), npm run build (OK) y capturas desktop/móvil sin errores de consola en browser_evidence/fde2af92-7942-467a-a686-5173756d3dad/final_step_128.png."
+    },
+    {
+      "timestamp": "2026-11-14T15:16:00-06:00",
+      "actor": "GotPay Agent (executor)",
+      "to": "GotPay Agent",
+      "event": "FIX 502 en POST /api/charges + auditoría G2R. Causa: pey rechazaba con HTTP 400 porque la UI mandaba expirationSeconds=300 y pey exige expiration 0 o >=360 s; además el cliente no leía qrString (habría usado el id como QR), mandaba externalMetadata en vez de metadata y en push mandaba phone en vez de phoneNumber y esperaba codiPnId en vez de transactionId/codiId. Cambios: src/lib/pey/client.ts (normalizePeyExpiration>=360, metadata, qrString obligatorio, phoneNumber, transactionId/codiId, mensaje de error de pey con type/message), src/lib/db/lifecycle.ts (normaliza expiración), src/app/api/charges/route.ts (log del error de pey sin secretos), src/components/useGotPayPos.ts (en API Real ya no genera QR mock: expone chargeError), src/app/page.tsx y src/app/jurado/page.tsx (banner de error rojo con botón explícito Usar Mock Local; expirationSeconds 360). Verificado: tsc 0 errores, npm test 6/6, npm run build OK, /api/health por túnel ok, POST real 201 chargeId 01M7DYFJ22JY5Y5MV2M7YFQ0T3 (codiQrId 35eb2996b3, QR TYP 20 real). G2R auditada: sin Plaid/Appwrite/Dwolla/Sentry/auth, menta solo sobre navy, sin secretos, CLABE completa solo en fixtures de pruebas; LICENSES/ faltaba y se recreó con los 2 avisos MIT. MVP-W2R -> completed. Demo reiniciada (PIDs 2301/2319/2544; cloudflared intacto)."
+    }
+  ],
+  "dispatch": {
+    "id": "DESPACHO-001",
+    "issuedBy": "GotPay Agent",
+    "issuedAt": "2026-11-14T12:38:07-06:00",
+    "status": "active",
+    "orders": {
+      "Cursor AI": ".swarm/orders/01-cursor-ai.md",
+      "Antigravity": ".swarm/orders/05-antigravity-REDISENO.md",
+      "Muse": ".swarm/orders/03-muse.md"
+    },
+    "general": ".swarm/orders/00-DESPACHO-001.md",
+    "executionOrder": [
+      "Paso 1 (ya): MVP-W1 Cursor AI + MVP-W3 Muse + MVP-W2 fase A Antigravity (mocks)",
+      "Paso 2: MVP-W2 fase B al pasar G1; integración de marca al entregar G3.1",
+      "Paso 2R: MVP-W2R Antigravity rediseño profesional de UI (tras G2, antes del pitch 15 nov)",
+      "Paso 3: MVP-W4 al pasar G1 y G2"
+    ],
+    "criticalPath": "MVP-W1 -> MVP-W2B -> MVP-W2R -> MVP-W4",
+    "statusFlow": "dispatched -> in_progress -> gate_passed -> completed (solo GotPay Agent marca completed)"
+  }
+}

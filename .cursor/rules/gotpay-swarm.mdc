@@ -1,0 +1,12 @@
+---
+description: Reglas del enjambre GotPay — GotPay Agent (Grok Bot) como orquestador
+alwaysApply: true
+---
+
+# GotPay Swarm — Conector Cursor AI
+
+1. **Orquestador:** `GotPay Agent` (en Grok Bot) gobierna el estado del proyecto en `.swarm/SWARM_STATE.json`. Al iniciar y cerrar cada bloque de trabajo, sincroniza `waves` y `handoffLog` en `.swarm/SWARM_STATE.json`.
+2. **Agentes autorizados:** únicamente `GotPay Agent`, `Cursor AI`, `Antigravity` y `Muse`. **Prohibido** invocar `Claude Code` o `Gemini CLI`.
+3. **Propiedad de archivos de Cursor AI:** `package.json`, `tsconfig.json`, `next.config.ts`, `src/types/gotpay.ts`, `src/lib/pey/**`, `src/lib/db/**`, `src/lib/events/**`, `src/app/api/**` y configuración de despliegue. Respeta los alcances de `Antigravity` (`src/components/**`, `src/app/page.tsx`, `src/app/jurado/**`, `src/lib/audio/**`) y `Muse` (`public/brand/**`, `public/sounds/**`, `.swarm/pitch/**`) salvo integración solicitada.
+4. **Seguridad pey:** nunca leas ni imprimas el valor literal de `PEY_API_KEY` o `PEY_WEBHOOK_SECRET` en respuestas, logs, commits o documentación. Verifica siempre firmas con `standardwebhooks` sobre raw body, deduplica por `webhook-id` + `transactionId`, y enmascara la CLABE del pagador a los últimos 4 dígitos (`clabeLast4`).
+5. **Repositorio remoto:** `https://github.com/jahdielrosalesjacobo3-byte/GotPay.git` (100% greenfield e individual, sin activos de empleador).

@@ -1,0 +1,80 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Colores oficiales medidos de public/brand/source/*.jpg (brand-tokens.json) */
+  --gp-navy: #112645;
+  --gp-slate: #27354b;
+  --gp-blue: #026efb;
+  --gp-teal: #02bec8;
+  --gp-mint: #0adda9;
+  --gp-pay-green: #0cd6a7;
+  --gp-amber: #f5a524;
+  --gp-white: #ffffff;
+  --gp-gradient: linear-gradient(135deg, #026efb 0%, #02bec8 50%, #0adda9 100%);
+
+  /* Tokens funcionales de alto contraste */
+  --gp-paid-bg: #0adda9;
+  --gp-paid-fg: #112645;
+  --gp-late-bg: #f5a524;
+  --gp-late-fg: #112645;
+  --gp-pending-bg: #112645;
+  --gp-pending-fg: #ffffff;
+}
+
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background-color: #f8fafc;
+  color: var(--gp-navy);
+  font-family:
+    "Inter",
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    Roboto,
+    "Helvetica Neue",
+    Arial,
+    sans-serif;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+}
+
+.gp-gradient-bg {
+  background-image: var(--gp-gradient);
+}
+
+.gp-bank-card-mesh {
+  background-color: var(--gp-navy);
+  background-image:
+    radial-gradient(at 85% 15%, rgba(2, 110, 251, 0.42) 0px, transparent 55%),
+    radial-gradient(at 15% 85%, rgba(10, 221, 169, 0.28) 0px, transparent 55%),
+    linear-gradient(135deg, #112645 0%, #1b365d 55%, #026efb 100%);
+}
+
+.gp-amount-display {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.03em;
+}
+
+.gp-touch-btn {
+  touch-action: manipulation;
+  user-select: none;
+}
+
+.gp-fintech-card {
+  background-color: var(--gp-white);
+  border: 1px solid rgba(17, 38, 69, 0.09);
+  border-radius: 0.75rem;
+  box-shadow:
+    0 1px 2px 0 rgba(17, 38, 69, 0.03),
+    0 1px 3px 0 rgba(17, 38, 69, 0.04);
+}
