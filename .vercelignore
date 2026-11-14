@@ -1,0 +1,11 @@
+.env
+.env.*
+!.env.example
+.data/
+.swarm/logs/
+.swarm/backups/
+.refs/
+.serena/
+.next/
+node_modules/
+*.tsbuildinfo

@@ -34,7 +34,38 @@
     "apiConnectivityVerified": true,
     "webhookSecretConfigured": true,
     "notes": "Webhook API key Cursor re-registrado 2026-11-14 14:00 CST con secreto regenerado (via boton regenerar del dialogo del engrane; unica forma de cambiar URL). Secreto solo en .env.local (600).",
-    "webhookUrl": "https://read-birth-donations-procedures.trycloudflare.com/api/webhooks/pey"
+    "webhookUrl": "https://read-birth-donations-procedures.trycloudflare.com/api/webhooks/pey",
+    "deploy": {
+      "provider": "vercel",
+      "project": "gotpay",
+      "projectId": "prj_SiTe3Ch0b3HD0Fu1fcZL03oCFmHj",
+      "team": "team_tJlXvVaUXJQ9jcxlz8CiJIkF",
+      "productionUrl": "https://gotpay.vercel.app",
+      "functionRegion": "iad1",
+      "webhookEndpoint": "https://gotpay.vercel.app/api/webhooks/pey",
+      "webhookRegisteredInPey": false,
+      "store": {
+        "mode": "supabase",
+        "supabaseProjectRef": "gllkbebcgdegucudfcps",
+        "region": "us-east-1",
+        "schema": "gotpay",
+        "tables": [
+          "gotpay.charges",
+          "gotpay.processed_webhooks"
+        ],
+        "serverRole": "gotpay_server (pooler aws-1-us-east-1:6543)"
+      },
+      "envVarNames": [
+        "PEY_API_KEY (sensitive)",
+        "PEY_WEBHOOK_SECRET (sensitive)",
+        "SUPABASE_DB_URL (sensitive)",
+        "GOTPAY_STORE=supabase",
+        "PEY_API_BASE_URL",
+        "NEXT_PUBLIC_APP_NAME"
+      ],
+      "verifiedAt": "2026-11-14T15:53:00-06:00",
+      "notes": "Deploy por Vercel CLI desde la Mac (integracion GitHub de Vercel no instalada: git connect fallo). Webhook en pey aun apunta al tunel cloudflared; registrar la URL de Vercel regenerando secreto con el boton de regenerar y actualizar PEY_WEBHOOK_SECRET en Vercel."
+    }
   },
   "phase": "MVP_DISPATCH_ACTIVE",
   "deadlines": {
@@ -300,6 +331,12 @@
       "actor": "GotPay Agent (executor)",
       "to": "GotPay Agent",
       "event": "FIX 502 en POST /api/charges + auditoría G2R. Causa: pey rechazaba con HTTP 400 porque la UI mandaba expirationSeconds=300 y pey exige expiration 0 o >=360 s; además el cliente no leía qrString (habría usado el id como QR), mandaba externalMetadata en vez de metadata y en push mandaba phone en vez de phoneNumber y esperaba codiPnId en vez de transactionId/codiId. Cambios: src/lib/pey/client.ts (normalizePeyExpiration>=360, metadata, qrString obligatorio, phoneNumber, transactionId/codiId, mensaje de error de pey con type/message), src/lib/db/lifecycle.ts (normaliza expiración), src/app/api/charges/route.ts (log del error de pey sin secretos), src/components/useGotPayPos.ts (en API Real ya no genera QR mock: expone chargeError), src/app/page.tsx y src/app/jurado/page.tsx (banner de error rojo con botón explícito Usar Mock Local; expirationSeconds 360). Verificado: tsc 0 errores, npm test 6/6, npm run build OK, /api/health por túnel ok, POST real 201 chargeId 01M7DYFJ22JY5Y5MV2M7YFQ0T3 (codiQrId 35eb2996b3, QR TYP 20 real). G2R auditada: sin Plaid/Appwrite/Dwolla/Sentry/auth, menta solo sobre navy, sin secretos, CLABE completa solo en fixtures de pruebas; LICENSES/ faltaba y se recreó con los 2 avisos MIT. MVP-W2R -> completed. Demo reiniciada (PIDs 2301/2319/2544; cloudflared intacto)."
+    },
+    {
+      "timestamp": "2026-11-14T15:55:00-06:00",
+      "actor": "GotPay Agent (executor)",
+      "to": "GotPay Agent",
+      "event": "Migracion Vercel + Supabase: store Postgres conmutable (GOTPAY_STORE=supabase|file), SSE por polling 1s con stream de 50s, desplegado en https://gotpay.vercel.app. health OK (store supabase reachable, llaves pey configuradas), webhook firma falsa -> 401, cobro real $0.01 creado 201 PENDING con QR (id 01M7E0TK3Z8822KWQCZEV1NG7B). Pendiente: registrar URL de Vercel en portal pey (regenera secreto) y subir nuevo PEY_WEBHOOK_SECRET a Vercel + redeploy."
     }
   ],
   "dispatch": {
