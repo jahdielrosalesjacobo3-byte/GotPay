@@ -6,9 +6,15 @@ import React, { useEffect, useState } from "react";
 interface QrCodeCanvasProps {
   readonly qrData: string;
   readonly size?: number;
+  /** Permite guardar el QR (página pública); el modal del cajero mantiene select-none. */
+  readonly allowSave?: boolean;
 }
 
-export function QrCodeCanvas({ qrData, size = 300 }: QrCodeCanvasProps) {
+export function QrCodeCanvas({
+  qrData,
+  size = 300,
+  allowSave = false,
+}: QrCodeCanvasProps) {
   const [dataUrl, setDataUrl] = useState<string>("");
   const [renderError, setRenderError] = useState<string | null>(null);
 
@@ -77,8 +83,17 @@ export function QrCodeCanvas({ qrData, size = 300 }: QrCodeCanvasProps) {
         alt="Código QR CoDi para pago en GotPay"
         width={size}
         height={size}
-        className="h-auto w-full max-w-[290px] select-none sm:max-w-[320px]"
+        className={`h-auto w-full max-w-[290px] sm:max-w-[320px]${allowSave ? "" : " select-none"}`}
       />
+      {allowSave ? (
+        <a
+          href={dataUrl}
+          download="gotpay-qr.png"
+          className="gp-touch-btn mt-3 inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-lg border border-[#112645]/15 bg-[var(--gp-white)] px-4 text-sm font-semibold text-[var(--gp-navy)] transition hover:bg-[#112645]/[0.04]"
+        >
+          Guardar QR
+        </a>
+      ) : null}
     </div>
   );
 }

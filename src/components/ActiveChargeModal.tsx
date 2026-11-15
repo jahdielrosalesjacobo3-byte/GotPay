@@ -57,6 +57,8 @@ export function ActiveChargeModal({
   );
   const [pushPhone, setPushPhone] = useState<string>("");
   const [phoneError, setPhoneError] = useState<string | null>(null);
+  const [waPhone, setWaPhone] = useState<string>("");
+  const [waPhoneError, setWaPhoneError] = useState<string | null>(null);
   const [remainingMs, setRemainingMs] = useState<number>(0);
 
   useEffect(() => {
@@ -93,6 +95,21 @@ export function ActiveChargeModal({
     setPhoneError(null);
     await onSendPushAlternative(charge.amount, charge.concept, digits);
     setPushPhone("");
+  };
+
+  const handleWhatsAppShare = () => {
+    const digits = waPhone.replace(/\D/g, "");
+    if (digits.length !== 10) {
+      setWaPhoneError("Ingresa los 10 dígitos del celular del comprador.");
+      return;
+    }
+    setWaPhoneError(null);
+    const origin =
+      typeof window !== "undefined" ? window.location.origin : "";
+    const payUrl = `${origin}/pay/${encodeURIComponent(charge.id)}`;
+    const message = `Tu cobro GotPay de ${formatMxn(charge.amount)}, paga aquí: ${payUrl}`;
+    const waUrl = `https://wa.me/52${digits}?text=${encodeURIComponent(message)}`;
+    window.open(waUrl, "_blank", "noopener,noreferrer");
   };
 
   return (
@@ -202,6 +219,43 @@ export function ActiveChargeModal({
             <p className="mt-2.5 text-center text-xs text-[var(--gp-slate)]">
               Escanea desde cualquier app bancaria con CoDi · 0% comisión
             </p>
+            <div className="mt-4 w-full border-t border-[#112645]/[0.08] pt-4">
+              <p className="text-xs font-medium text-[var(--gp-navy)]">
+                Enviar enlace de pago por WhatsApp (10 dígitos):
+              </p>
+              <div className="mt-2 flex flex-col gap-2 sm:flex-row">
+                <input
+                  type="tel"
+                  inputMode="numeric"
+                  maxLength={10}
+                  value={waPhone}
+                  onChange={(e) =>
+                    setWaPhone(e.target.value.replace(/\D/g, "").slice(0, 10))
+                  }
+                  placeholder="Ej. 5512345678"
+                  data-testid="wa-phone-input"
+                  className="h-11 min-h-[44px] flex-1 rounded-lg border border-[#112645]/15 bg-[var(--gp-white)] px-3 font-mono text-sm font-semibold text-[var(--gp-navy)] focus:border-[var(--gp-blue)] focus:outline-none"
+                />
+                <button
+                  type="button"
+                  onClick={handleWhatsAppShare}
+                  data-testid="wa-share-btn"
+                  className="gp-touch-btn inline-flex min-h-[44px] items-center justify-center rounded-lg bg-[var(--gp-navy)] px-4 text-xs font-semibold text-[var(--gp-white)]"
+                >
+                  Abrir WhatsApp
+                </button>
+              </div>
+              {waPhoneError ? (
+                <p className="mt-2 text-xs font-medium text-[var(--gp-navy)] underline decoration-[var(--gp-amber)]">
+                  {waPhoneError}
+                </p>
+              ) : (
+                <p className="mt-2 text-[11px] text-[var(--gp-slate)]">
+                  Se abre WhatsApp con el mensaje listo; tú confirmas el envío.
+                  No guardamos el número.
+                </p>
+              )}
+            </div>
           </div>
         ) : (
           <div className="mt-4 rounded-xl border border-[#112645]/[0.08] bg-[#112645]/[0.015] p-4">
